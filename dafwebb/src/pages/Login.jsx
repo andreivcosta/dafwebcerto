@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import axios from "axios"; // ADICIONADO: Importando o Axios
+import axios from "axios"; 
 
 export default function Login() {
-  // CONFIGURAÇÃO DA API: Apontando para o seu back-end Node.js
+  // CONFIGURAÇÃO DA API: Apontando o back-end 
   const api = axios.create({
     baseURL: "http://localhost:3000",
     timeout: 5000,
@@ -21,7 +21,7 @@ export default function Login() {
     }));
   };
 
-  // FUNÇÃO CORRIGIDA: Agora ela valida as credenciais no banco de dados antes de entrar
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
 

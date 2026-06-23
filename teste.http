@@ -8,18 +8,17 @@ app.use(express.json()); // Permite que a API entenda JSON enviado no corpo das 
 
 // =========================================================================
 // 1. CONEXÃO COM O POSTGRESQL 
-// (Substitua pelos dados que você configurou no pgAdmin)
 // =========================================================================
 const pool = new Pool({
     user: 'postgres',          
     host: 'localhost',
-    database: 'projeto_dafweb',      // 👈 Coloque aqui o nome do banco que você criou no pgAdmin
-    password: '1691',  // 👈 Coloque aqui a senha que você definiu na instalação
+    database: 'projeto_dafweb',   
+    password: '1691', 
     port: 5432,
-    ssl: false                   // Desativa o SSL para rodar liso no localhost
+    ssl: false                   
 });
 
-const JWT_SECRET = 'CHAVE_SUPER_SECRETA_DO_TRABALHO'; // Usada para assinar o token JWT
+const JWT_SECRET = 'CHAVE_SUPER_SECRETA_DO_TRABALHO'; 
 
 // =========================================================================
 // 2. ROTA DE CADASTRO DO USUÁRIO (Sign Up)
@@ -101,5 +100,5 @@ app.post('/login', async (req, res) => {
 
 // Inicializa o servidor na porta 3000
 app.listen(3000, () => {
-    console.log('Servidor back-end rodando na porta 3000! 🚀');
+    console.log('Servidor back-end rodando na porta 3000!');
 });

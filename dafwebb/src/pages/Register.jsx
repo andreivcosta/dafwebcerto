@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 
 export default function Register() {
-  // CONFIGURAÇÃO CORRIGIDA: Apontando para o seu Node.js na porta 3000
+  
   const api = axios.create({
     baseURL: "http://localhost:3000",
     timeout: 5000, 
@@ -58,14 +58,14 @@ export default function Register() {
     if (!validateForm()) return;
 
     try {
-      // CHAMADA CORRIGIDA: Enviando para '/cadastro' e mapeando 'nome' e 'senha' como o Node espera
+      
       await api.post("/cadastro", {
         nome: formData.name,
         email: formData.email,
         senha: formData.password,
       });
 
-      // Se der certo, ele vai direto para a tela de login
+      // Tela de login
       navigate("/login");
     } catch (error) {
       console.log(error);

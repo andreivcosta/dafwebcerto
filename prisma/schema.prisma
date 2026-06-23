@@ -7,8 +7,23 @@ generator client {
 }
 
 model usuarios {
-  id         Int    @id @default(autoincrement())
-  nome       String
-  email      String @unique
-  senha_hash String
+  id           Int           @id @default(autoincrement())
+  nome         String
+  email        String        @unique
+  senha_hash   String
+
+  comparacoes  comparacoes[]
+}
+
+model comparacoes {
+  id                Int      @id @default(autoincrement())
+  regime_atual      String
+  regime_simulado   String
+  imposto_atual     Float
+  imposto_simulado  Float
+  economia          Float
+  created_at        DateTime @default(now())
+
+  usuario_id        Int
+  usuario           usuarios @relation(fields: [usuario_id], references: [id])
 }
