@@ -1,24 +1,28 @@
 const express = require('express');
+const cors = require('cors'); 
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const app = express();
-app.use(express.json()); // Permite que a API entenda JSON enviado no corpo das requisições
 
+// Ativa o CORS e a leitura de JSON de forma limpa e única
+app.use(cors()); 
+app.use(express.json()); 
 
 // =========================================================================
-
+// CONEXÃO COM O BANCO DE DADOS
+// =========================================================================
 const pool = new Pool({
     user: 'postgres',          
     host: 'localhost',
     database: 'projeto_dafweb',      
     password: '1691',  
     port: 5432,
-    ssl: false                   // Desativa o SSL para rodar liso no localhost
+    ssl: false 
 });
 
-const JWT_SECRET = 'CHAVE_SUPER_SECRETA_DO_TRABALHO'; // Usada para assinar o token JWT
+const JWT_SECRET = 'CHAVE_SUPER_SECRETA_DO_TRABALHO'; 
 
 // =========================================================================
 // 2. ROTA DE CADASTRO DO USUÁRIO (Sign Up)
@@ -31,11 +35,9 @@ app.post('/cadastro', async (req, res) => {
     }
 
     try {
-        // Criptografa a senha antes de salvar no banco
         const salt = await bcrypt.genSalt(10);
         const senhaHash = await bcrypt.hash(senha, salt);
 
-        // Insere o usuário no PostgreSQL
         const query = 'INSERT INTO usuarios (nome, email, senha_hash) VALUES ($1, $2, $3) RETURNING id, nome, email';
         const resultado = await pool.query(query, [nome, email, senhaHash]);
 
@@ -45,7 +47,6 @@ app.post('/cadastro', async (req, res) => {
         });
 
     } catch (error) {
-        // Código 23505 significa que o e-mail já existe (Unique Constraint no Postgres)
         if (error.code === '23505') {
             return res.status(400).json({ erro: 'Este e-mail já está em uso.' });
         }
@@ -65,7 +66,6 @@ app.post('/login', async (req, res) => {
     }
 
     try {
-        // Busca o usuário no banco pelo e-mail
         const query = 'SELECT * FROM usuarios WHERE email = $1';
         const resultado = await pool.query(query, [email]);
         const usuario = resultado.rows[0];
@@ -74,7 +74,6 @@ app.post('/login', async (req, res) => {
             return res.status(401).json({ erro: 'E-mail ou senha incorretos.' });
         }
 
-        // Compara a senha digitada com a senha criptografada do banco
         const senhaValida = await bcrypt.compare(senha, usuario.senha_hash);
         if (!senhaValida) {
             return res.status(401).json({ erro: 'E-mail ou senha incorretos.' });
