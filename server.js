@@ -1,3 +1,4 @@
+const { verifyToken } = require('./authMiddware');
 const express = require('express');
 const cors = require('cors'); 
 const bcrypt = require('bcryptjs');
@@ -104,6 +105,13 @@ app.post('/login', async (req, res) => {
         console.error(error);
         return res.status(500).json({ erro: 'Erro interno no servidor.' });
     }
+});
+
+app.get('/perfil', verifyToken, (req, res) => {
+    res.json({
+        mensagem: 'Rota protegida!',
+        usuario: req.user
+    });
 });
 
 // Inicialização do Servidor
