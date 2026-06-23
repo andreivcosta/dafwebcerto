@@ -1,0 +1,105 @@
+const express = require('express');
+const { Pool } = require('pg');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+
+const app = express();
+app.use(express.json()); // Permite que a API entenda JSON enviado no corpo das requisições
+
+// =========================================================================
+// 1. CONEXÃO COM O POSTGRESQL 
+// (Substitua pelos dados que você configurou no pgAdmin)
+// =========================================================================
+const pool = new Pool({
+    user: 'postgres',          
+    host: 'localhost',
+    database: 'projeto_dafweb',      // 👈 Coloque aqui o nome do banco que você criou no pgAdmin
+    password: '1691',  // 👈 Coloque aqui a senha que você definiu na instalação
+    port: 5432,
+    ssl: false                   // Desativa o SSL para rodar liso no localhost
+});
+
+const JWT_SECRET = 'CHAVE_SUPER_SECRETA_DO_TRABALHO'; // Usada para assinar o token JWT
+
+// =========================================================================
+// 2. ROTA DE CADASTRO DO USUÁRIO (Sign Up)
+// =========================================================================
+app.post('/cadastro', async (req, res) => {
+    const { nome, email, senha } = req.body;
+
+    if (!nome || !email || !senha) {
+        return res.status(400).json({ erro: 'Por favor, preencha todos os campos.' });
+    }
+
+    try {
+        // Criptografa a senha antes de salvar no banco
+        const salt = await bcrypt.genSalt(10);
+        const senhaHash = await bcrypt.hash(senha, salt);
+
+        // Insere o usuário no PostgreSQL
+        const query = 'INSERT INTO usuarios (nome, email, senha_hash) VALUES ($1, $2, $3) RETURNING id, nome, email';
+        const resultado = await pool.query(query, [nome, email, senhaHash]);
+
+        return res.status(201).json({
+            mensagem: 'Usuário cadastrado com sucesso!',
+            usuario: resultado.rows[0]
+        });
+
+    } catch (error) {
+        // Código 23505 significa que o e-mail já existe (Unique Constraint no Postgres)
+        if (error.code === '23505') {
+            return res.status(400).json({ erro: 'Este e-mail já está em uso.' });
+        }
+        console.error(error);
+        return res.status(500).json({ erro: 'Erro interno no servidor.' });
+    }
+});
+
+// =========================================================================
+// 3. ROTA DE LOGIN (Sign In)
+// =========================================================================
+app.post('/login', async (req, res) => {
+    const { email, senha } = req.body;
+
+    if (!email || !senha) {
+        return res.status(400).json({ erro: 'Preencha e-mail e senha.' });
+    }
+
+    try {
+        // Busca o usuário no banco pelo e-mail
+        const query = 'SELECT * FROM usuarios WHERE email = $1';
+        const resultado = await pool.query(query, [email]);
+        const usuario = resultado.rows[0];
+
+        if (!usuario) {
+            return res.status(401).json({ erro: 'E-mail ou senha incorretos.' });
+        }
+
+        // Compara a senha digitada com a senha criptografada do banco
+        const senhaValida = await bcrypt.compare(senha, usuario.senha_hash);
+        if (!senhaValida) {
+            return res.status(401).json({ erro: 'E-mail ou senha incorretos.' });
+        }
+
+        // Gera o token JWT guardando o ID do usuário (isso vai ligar com a parte do seu amigo)
+        const token = jwt.sign(
+            { id: usuario.id }, 
+            JWT_SECRET, 
+            { expiresIn: '8h' }
+        );
+
+        return res.json({
+            mensagem: 'Login efetuado com sucesso!',
+            token
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ erro: 'Erro interno no servidor.' });
+    }
+});
+
+// Inicializa o servidor na porta 3000
+app.listen(3000, () => {
+    console.log('Servidor back-end rodando na porta 3000! 🚀');
+});
