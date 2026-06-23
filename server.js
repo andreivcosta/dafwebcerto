@@ -1,31 +1,28 @@
 const express = require('express');
 const cors = require('cors'); 
-const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { Pool } = require('pg'); 
+const { PrismaClient } = require('@prisma/client');
+const { PrismaPg } = require('@prisma/adapter-pg');
 
 const app = express();
 
-// Ativa o CORS e a leitura de JSON de forma limpa e única
+// 1. Configuração do Driver de Conexão do Prisma 7
+const connectionString = 'postgresql://postgres:1691@localhost:5432/projeto_dafweb?schema=public';
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
+
+// Middlewares
 app.use(cors()); 
 app.use(express.json()); 
 
-// =========================================================================
-// CONEXÃO COM O BANCO DE DADOS
-// =========================================================================
-const pool = new Pool({
-    user: 'postgres',          
-    host: 'localhost',
-    database: 'projeto_dafweb',      
-    password: '1691',  
-    port: 5432,
-    ssl: false 
-});
-
+// Chave secreta para o Token JWT
 const JWT_SECRET = 'CHAVE_SUPER_SECRETA_DO_TRABALHO'; 
 
 // =========================================================================
-// 2. ROTA DE CADASTRO DO USUÁRIO (Sign Up)
+// ROTA DE CADASTRO (Sign Up) - COM PRISMA 7
 // =========================================================================
 app.post('/cadastro', async (req, res) => {
     const { nome, email, senha } = req.body;
@@ -38,16 +35,27 @@ app.post('/cadastro', async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const senhaHash = await bcrypt.hash(senha, salt);
 
-        const query = 'INSERT INTO usuarios (nome, email, senha_hash) VALUES ($1, $2, $3) RETURNING id, nome, email';
-        const resultado = await pool.query(query, [nome, email, senhaHash]);
+        // Criação do registro no banco com Prisma
+        const novoUsuario = await prisma.usuarios.create({
+            data: {
+                nome: nome,
+                email: email,
+                senha_hash: senhaHash
+            }
+        });
 
         return res.status(201).json({
             mensagem: 'Usuário cadastrado com sucesso!',
-            usuario: resultado.rows[0]
+            usuario: { 
+                id: novoUsuario.id, 
+                nome: novoUsuario.nome, 
+                email: novoUsuario.email 
+            }
         });
 
     } catch (error) {
-        if (error.code === '23505') {
+        // P2002: Código do Prisma para e-mail já existente (Unique)
+        if (error.code === 'P2002') {
             return res.status(400).json({ erro: 'Este e-mail já está em uso.' });
         }
         console.error(error);
@@ -56,7 +64,7 @@ app.post('/cadastro', async (req, res) => {
 });
 
 // =========================================================================
-// 3. ROTA DE LOGIN (Sign In)
+// ROTA DE LOGIN (Sign In) - COM PRISMA 7
 // =========================================================================
 app.post('/login', async (req, res) => {
     const { email, senha } = req.body;
@@ -66,9 +74,10 @@ app.post('/login', async (req, res) => {
     }
 
     try {
-        const query = 'SELECT * FROM usuarios WHERE email = $1';
-        const resultado = await pool.query(query, [email]);
-        const usuario = resultado.rows[0];
+        // Busca utilizador por e-mail único com Prisma
+        const usuario = await prisma.usuarios.findUnique({
+            where: { email: email }
+        });
 
         if (!usuario) {
             return res.status(401).json({ erro: 'E-mail ou senha incorretos.' });
@@ -79,6 +88,7 @@ app.post('/login', async (req, res) => {
             return res.status(401).json({ erro: 'E-mail ou senha incorretos.' });
         }
 
+        // Geração do token JWT válido por 8 horas
         const token = jwt.sign(
             { id: usuario.id }, 
             JWT_SECRET, 
@@ -96,7 +106,7 @@ app.post('/login', async (req, res) => {
     }
 });
 
-// Inicializa o servidor na porta 3000
+// Inicialização do Servidor
 app.listen(3000, () => {
-    console.log('Servidor back-end rodando na porta 3000! 🚀');
+    console.log('Servidor rodando com Prisma 7 na porta 3000! 🚀');
 });
